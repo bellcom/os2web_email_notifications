@@ -264,7 +264,7 @@ function os2web_email_notifications_form_submit($form, $form_state) {
     _os2web_email_notifications_send_confirmation_email($email, $token, $committee_names_arr);
   }
   else {
-    drupal_set_message(t('Email @email is successfully subscribed to the notifications of the following committees: <br/>@committees', array(
+    drupal_set_message(t('Email @email is successfully subscribed to the notifications of the following committees: @committees', array(
       '@email' => $email,
       '@committees' => implode(", ", $committee_names_arr)
     )));
