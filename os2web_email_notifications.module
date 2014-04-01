@@ -54,6 +54,29 @@ function os2web_email_notifications_menu() {
 }
 
 /**
+ * Implements hook_block_info()
+ * @author Thomas Thune Hansen <tth@bellcom.dk>
+ */
+function os2web_email_notifications_block_info(){
+  $blocks['subscribe'] = array(
+    'info' => t('Subscribe to email notifications'),
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view()
+ * @author Thomas Thune Hansen <tth@bellcom.dk>
+ */
+function os2web_email_notifications_block_view($delta){
+  switch($delta){
+    case 'subscribe':
+      $block['content'] = os2web_email_notifications_page();
+      return $block;
+  }
+}
+
+/**
  * Implements hook_form_alter().
  *
  * Add configuration to the settings form.
