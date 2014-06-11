@@ -473,7 +473,9 @@ function _os2web_email_notifications_send_email($to, $subject, $body) {
       'From' => $from,
       'Sender' => $from,
       'Return-Path' => $from,
-      'Content-Type' => 'text/html;charset=utf-8',
+      'Content-Type' => 'text/html; charset=UTF-8;',
+      'Content-Transfer-Encoding' => '8Bit',
+      'X-Mailer' => 'Drupal',
     ),
   );
   $system = drupal_mail_system("os2web_email_notifications", "");
