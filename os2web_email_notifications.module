@@ -162,7 +162,83 @@ function os2web_email_notifications_form_os2web_settings_settings_form_alter(&$f
     <b>!unsub_all_link</b> - link to unsubscribe from the notification of all committees<br/>',
     '#title' => t('Available variables'),
   );
+  $form['os2web_email_notifications']['os2web_email_notifications_test_nodeID'] = array(
+   '#type' => 'textfield',
+   '#title' => t('Test node id'),
+   '#default_value' => variable_get('os2web_email_notifications_test_nodeID', ''),
+  );
+  $form['os2web_email_notifications']['os2web_email_notifications_test_email'] = array(
+   '#type' => 'textfield',
+   '#title' => t('Test mailadresse'),
+   '#default_value' => variable_get('os2web_email_notifications_test_email', ''),
+  );
+  $form['os2web_email_notifications']['os2web_email_notifications_sendtest'] = array(
+    '#type' => 'submit',
+    '#value' => t('Send test mail nu!'),
+    '#submit' => array('os2web_email_notifications_sendtest'),
+  );
 
+}
+
+function os2web_email_notifications_sendtest() {
+  $nid = variable_get('os2web_email_notifications_test_nodeID', FALSE);
+  if ($nid) {
+    $node = node_load($nid);
+  }
+  else {
+    return;
+  }
+  if ($node->type === 'os2web_meetings_meeting') {
+    $status = $node->field_os2web_meetings_type['und'][0]['value'];
+    if (strcasecmp($status, 'Dagsorden') == 0 || strcasecmp($status, 'Referat') == 0) {
+      $committee_tid = $node->field_os2web_meetings_committee['und'][0]['tid'];
+
+      $cName = taxonomy_term_load($committee_tid)->name;
+      $mName = check_plain($node->title);
+
+      $dt = new DateTime($node->field_os2web_meetings_date['und'][0]['value'], new DateTimeZone($node->field_os2web_meetings_date['und'][0]['timezone_db']));
+      $dt->setTimezone(new DateTimeZone('Europe/Copenhagen'));
+      $month = $dt->format('F');
+      $month = strtolower(t($month));
+      $mDate = $dt->format('d.') . ' ' . $month . ' ' . $dt->format('Y H:i');
+
+      $published_item = (strcasecmp($status, 'Dagsorden') == 0) ? 'en dagsorden' : 'et referat';
+
+      //getting subject and body
+      $subject_template = variable_get('os2web_email_notifications_notif_email_subject', '!meeting_type til !committee er publiceret');
+      $body_template = variable_get('os2web_email_notifications_notif_email_body', 'Du abonnerer på !committee.' . PHP_EOL
+        . 'Der er publiceret !meeting_type til !meeting_name !meeting_date.' . PHP_EOL . PHP_EOL
+        . 'Du kan afmelde sig fra <a href="!unsub_link">denne udvalg</a> eller fra <a href="!unsub_all_link">alle udvalger</a>.');
+
+      //composing search/replace
+      $search = array('!committee', '!meeting_name', '!meeting_date', '!meeting_type', PHP_EOL);
+      $replace = array($cName, $mName, $mDate, $published_item, '<br/>');
+
+      //making general replacements
+      $subject = str_replace($search, $replace, $subject_template);
+      $subject = ucfirst($subject);
+      $body = str_replace($search, $replace, $body_template);
+      $body = ucfirst($body);
+
+      $record['email'] = variable_get('os2web_email_notifications_test_email', 'yani@bellcom.dk');
+      $record['token'] = 'token';
+      $link_unsubscribe_this_com = $GLOBALS['base_url'] . "/kommunen/politik/abonner-pa-dagsordener/afmeld/{$record['email']}/{$record['token']}/{$committee_tid}";
+      $link_unsubscribe_all_com = $GLOBALS['base_url'] . "/kommunen/politik/abonner-pa-dagsordener/afmeld/{$record['email']}/{$record['token']}";
+
+      //replacing the links
+      $body = str_replace(array(
+          '!unsub_link',
+          '!unsub_all_link'
+        ), array(
+          $link_unsubscribe_this_com,
+          $link_unsubscribe_all_com
+        ), $body);
+
+      _os2web_email_notifications_send_email($record['email'], $subject, $body);
+    }
+  }
+
+  
 }
 
 /**
@@ -343,11 +419,11 @@ function os2web_email_notifications_node_presave($node) {
       $cName = taxonomy_term_load($committee_tid)->name;
       $mName = check_plain($node->title);
 
-      $dt = new DateTime($datetime, new DateTimeZone($node->field_os2web_meetings_date['und'][0]['timezone_db']));
+      $dt = new DateTime($node->field_os2web_meetings_date['und'][0]['value'], new DateTimeZone($node->field_os2web_meetings_date['und'][0]['timezone_db']));
       $dt->setTimezone(new DateTimeZone('Europe/Copenhagen'));
-      $mDate = $dt->format('Y-m-d H:i');
-      //$mDate = check_plain($node->field_os2web_meetings_date['und'][0]['value']);
-      
+      $month = $dt->format('F');
+      $month = strtolower(t($month));
+      $mDate = $dt->format('d.') . ' ' . $month . ' ' . $dt->format('Y H:i'); 
       $published_item = (strcasecmp($status, 'Dagsorden') == 0) ? 'en dagsorden' : 'et referat';
 
       //getting subject and body
